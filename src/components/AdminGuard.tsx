@@ -49,14 +49,14 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
             <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Email</label>
             <input
               required type="email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm focus:outline-none focus:border-primary"
+              className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl text-lg focus:outline-none focus:border-primary"
             />
           </div>
           <div>
             <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Password</label>
             <input
               required type="password" value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm focus:outline-none focus:border-primary"
+              className="w-full px-4 py-3 bg-card border-2 border-border rounded-xl text-lg focus:outline-none focus:border-primary"
             />
           </div>
           {authError && <p className="text-sm text-red-600">{authError}</p>}
@@ -67,10 +67,6 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
             {submitting ? "Signing in…" : "Sign In"}
           </button>
         </form>
-        <p className="text-xs text-muted-foreground mt-4">
-          Signed in but still seeing this? Your account isn't in the <code>admins</code> table yet —
-          add it via the Supabase SQL editor.
-        </p>
       </div>
     );
   }

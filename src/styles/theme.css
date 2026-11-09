@@ -2,43 +2,35 @@
 
 :root {
   --font-size: 16px;
-  --background: #FFFCF5;
-  --foreground: #1A1208;
-  --card: #FFFFFF;
-  --card-foreground: #1A1208;
-  --popover: #FFFFFF;
-  --popover-foreground: #1A1208;
-  --primary: #1F3D28;
-  --primary-foreground: #1A1208;
-  --secondary: #1F3D28;
-  --secondary-foreground: #FFFFFF;
-  --muted: #a48631;
-  --muted-foreground: #7A6440;
-  --accent: #08551f;
-  --accent-foreground: #FFFFFF;
+  --background: #0A1810;          /* dark green, almost black */
+  --foreground: #EDE6D6;          /* light cream — body text (must be light on dark bg) */
+  --card: #10211A;                /* dark green cards */
+  --card-foreground: #EDE6D6;
+  --popover: #10211A;
+  --popover-foreground: #EDE6D6;
+  --primary: #3E9B6C;             /* visible emerald on dark backgrounds */
+  --primary-foreground: #0A1810;  /* BLACK text on green buttons */
+  --secondary: #2E7D52;           /* brighter green sections */
+  --secondary-foreground: #0A1810;
+  --muted: #1A2C22;
+  --muted-foreground: #A7B3A0;
+  --accent: #C49A3C;              /* gold hover stays */
+  --accent-foreground: #0A1810;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --border: rgba(90, 60, 10, 0.10);
-  --input: #EDE4CC;
-  --input-background: #FAF6EE;
-  --switch-background: #D4C4A0;
+  --border: rgba(255, 255, 255, 0.10);
+  --input: #1C2B22;
+  --input-background: #0F1D15;
+  --switch-background: #2A3D31;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #7A5C14;
-  --chart-1: #7A5C14;
-  --chart-2: #C49A3C;
+  --ring: #C49A3C;
+  --chart-1: #C49A3C;
+  --chart-2: #3E9B6C;
   --chart-3: #E8C87A;
   --chart-4: #22C55E;
   --chart-5: #3B82F6;
   --radius: 0.375rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
@@ -185,8 +177,10 @@
 
 @layer utilities {
   .bg-secondary,
-  .bg-secondary * {
-    color: #ffffff !important;
+  .bg-secondary *,
+  .bg-primary,
+  .bg-primary * {
+    color: #0A1810 !important;   /* was #ffffff */
   }
 }
 

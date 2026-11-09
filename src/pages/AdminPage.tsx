@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Trash2, RotateCcw, X, ChevronLeft, ChevronRight, Package, ClipboardList } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, RotateCcw, X, ChevronLeft, ChevronRight, Package, ClipboardList, TrendingUp, DollarSign, ShoppingBag, BarChart3, Newspaper } from "lucide-react";
 import { Product, Order } from "@/lib/types";
 import {
   getProducts, createProduct, updateProduct, deleteProduct, restoreProduct,
@@ -11,10 +11,12 @@ import { useProducts } from "@/context/ProductsContext";
 import { Bell } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { signOut } from "@/lib/authService";
+import AdminNewsTab from "@/components/AdminNewsTab";
 
 function cn(...c: (string | undefined | false | null)[]) {
   return c.filter(Boolean).join(" ");
 }
+const fmt = (n: number, opts?: Intl.NumberFormatOptions) => n.toLocaleString("en-US", opts);
 
 const PAGE_SIZE = 20;
 
@@ -40,14 +42,14 @@ function NotificationBell() {
         )}
       </button>
       {showDropdown && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-border rounded-2xl shadow-xl p-4 z-50">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-xs sm:max-w-none sm:w-80 max-h-[70vh] overflow-y-auto bg-white border border-border rounded-2xl shadow-xl p-4 z-50">
           <p className="text-xs font-bold uppercase text-muted-foreground mb-3">Recent Notifications</p>
           {notifications.length === 0 ? (
             <p className="text-sm text-muted-foreground">No notifications yet</p>
           ) : notifications.map(n => (
             <div key={n.id} className={cn("p-3 rounded-xl mb-2", n.read ? "bg-white" : "bg-secondary")}>
               <p className="text-sm font-semibold">{n.title}</p>
-              <p className="text-xs text-muted-foreground">{n.message}</p>
+              <p className="text-xs text-muted-foreground break-words">{n.message}</p>
             </div>
           ))}
         </div>
@@ -60,7 +62,7 @@ function NotificationBell() {
 
 function inputCls(extra = "") {
   return cn(
-    "w-full px-3 py-2 bg-white border-2 border-border rounded-lg text-sm text-foreground",
+    "w-full px-3 py-2 bg-card border-2 border-border rounded-lg text-sm text-foreground",
     "placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors",
     extra
   );
@@ -70,8 +72,8 @@ function Pagination({ page, pageSize, total, onChange }: { page: number; pageSiz
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;
   return (
-    <div className="flex items-center justify-between mt-4 text-sm">
-      <span className="text-muted-foreground">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-sm">
+      <span className="text-muted-foreground text-center">
         Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
       </span>
       <div className="flex items-center gap-2">
@@ -82,6 +84,187 @@ function Pagination({ page, pageSize, total, onChange }: { page: number; pageSiz
         <button disabled={page >= totalPages} onClick={() => onChange(page + 1)} className="p-2 border-2 border-border rounded-lg disabled:opacity-40 hover:border-primary transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD TAB ──────────────────────────────────────────────────────────
+
+function DashboardTab() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const { orders } = await getOrders({});
+        setOrders(orders);
+
+        const expanded: Record<string, any> = {};
+        for (const order of orders) {
+          const full = await getOrderWithItems(order.id);
+          expanded[order.id] = full;
+        }
+        setExpandedOrders(expanded);
+      } catch (err) {
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const stats = useMemo(() => {
+    const deliveredOrders = orders.filter(o => o.status === "delivered");
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
+    const totalOrders = orders.length;
+    const deliveredCount = deliveredOrders.length;
+    const pendingOrders = orders.filter(o => o.status === "pending").length;
+    const processingOrders = orders.filter(o => o.status === "processing" || o.status === "in_transit").length;
+    const avgOrderValue = deliveredCount > 0 ? totalRevenue / deliveredCount : 0;
+
+    // Calculate best sellers
+    const productSales: Record<string, { name: string; qty: number; revenue: number }> = {};
+    Object.values(expandedOrders).forEach(order => {
+      if (order.items) {
+        order.items.forEach((item: any) => {
+          const key = item.productName;
+          if (!productSales[key]) {
+            productSales[key] = { name: item.productName, qty: 0, revenue: 0 };
+          }
+          productSales[key].qty += item.qty;
+          productSales[key].revenue += item.unitPrice * item.qty;
+        });
+      }
+    });
+
+    const bestSellers = Object.values(productSales)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+
+    // Recent orders (last 5)
+    const recentOrders = [...orders]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
+    return {
+      totalRevenue,
+      totalOrders,
+      avgOrderValue,
+      pendingOrders,
+      processingOrders,
+      deliveredCount,
+      bestSellers,
+      recentOrders,
+    };
+  }, [orders, expandedOrders]);
+
+  if (loading) {
+    return (
+      <div className="bg-black/15 rounded-2xl border border-border p-10 text-center">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Revenue</p>
+            <DollarSign className="w-5 h-5 text-primary flex-shrink-0" />
+          </div>
+          <p className="text-xl sm:text-3xl font-bold text-foreground break-words">₵{stats.totalRevenue.toLocaleString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">From delivered orders</p>
+        </div>
+
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Orders</p>
+            <ShoppingBag className="w-5 h-5 text-primary flex-shrink-0" />
+          </div>
+          <p className="text-xl sm:text-3xl font-bold text-foreground">{stats.totalOrders}</p>
+          <p className="text-xs text-muted-foreground mt-1">All time</p>
+        </div>
+
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">Avg Order Value</p>
+            <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
+          </div>
+          <p className="text-xl sm:text-3xl font-bold text-foreground break-words">₵{stats.avgOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-xs text-muted-foreground mt-1">Per delivered order</p>
+        </div>
+
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Orders</p>
+            <Package className="w-5 h-5 text-primary flex-shrink-0" />
+          </div>
+          <p className="text-xl sm:text-3xl font-bold text-foreground">{stats.pendingOrders + stats.processingOrders}</p>
+          <p className="text-xs text-muted-foreground mt-1">{stats.pendingOrders} pending · {stats.processingOrders} in progress</p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Best Sellers */}
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <h3 className="font-bold text-foreground">Top 5 Best Sellers</h3>
+          </div>
+          {stats.bestSellers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No sales data yet</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.bestSellers.map((product, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 p-3 bg-[#0A1810] rounded-xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-6 h-6 flex-shrink-0 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-foreground truncate">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">{product.qty} units sold</p>
+                    </div>
+                  </div>
+                  <p className="font-bold text-primary text-sm sm:text-base flex-shrink-0">₵{product.revenue.toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Orders */}
+        <div className="bg-black/15 rounded-2xl border border-border p-4 sm:p-6 min-w-0">
+          <div className="flex items-center gap-2 mb-4">
+            <ClipboardList className="w-5 h-5 text-primary" />
+            <h3 className="font-bold text-foreground">Recent Orders</h3>
+          </div>
+          {stats.recentOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No orders yet</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.recentOrders.map(order => (
+                <div key={order.id} className="flex items-center justify-between gap-3 p-3 bg-[#0A1810] rounded-xl">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">{order.orderNumber}</p>
+                    <p className="text-xs text-muted-foreground truncate">{order.firstName} {order.lastName}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-sm text-foreground">₵{order.total.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -193,11 +376,11 @@ function ProductFormModal({ product, onClose, onSaved }: {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-[#0A1810] rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-serif text-2xl font-bold text-foreground">{product ? "Edit Product" : "Add Product"}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold text-foreground">{product ? "Edit Product" : "Add Product"}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-black-100 rounded-lg transition-colors"><X className="w-5 h-5" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -240,7 +423,7 @@ function ProductFormModal({ product, onClose, onSaved }: {
                     <button
                       type="button"
                       onClick={() => removeExistingImage(i)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     >
                       ×
                     </button>
@@ -283,16 +466,16 @@ function ProductFormModal({ product, onClose, onSaved }: {
               <input value={form.colors} onChange={e => setForm(f => ({ ...f, colors: e.target.value }))} className={inputCls()} placeholder="Black, White, Navy" /></div>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div><label className="text-xs font-bold uppercase mb-1 block">Stock *</label>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0"><label className="text-xs font-bold uppercase mb-1 block">Stock *</label>
               <input required type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className={inputCls()} /></div>
-            <div><label className="text-xs font-bold uppercase mb-1 block">Rating</label>
+            <div className="min-w-0"><label className="text-xs font-bold uppercase mb-1 block">Rating</label>
               <input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm(f => ({ ...f, rating: e.target.value }))} className={inputCls()} /></div>
-            <div><label className="text-xs font-bold uppercase mb-1 block">Review Count</label>
+            <div className="min-w-0"><label className="text-xs font-bold uppercase mb-1 block">Review Count</label>
               <input type="number" value={form.reviewCount} onChange={e => setForm(f => ({ ...f, reviewCount: e.target.value }))} className={inputCls()} /></div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <label className="flex items-center gap-2 text-sm font-medium">
               <input type="checkbox" checked={form.isNew} onChange={e => setForm(f => ({ ...f, isNew: e.target.checked }))} className="accent-primary w-4 h-4" /> New Arrival
             </label>
@@ -308,10 +491,10 @@ function ProductFormModal({ product, onClose, onSaved }: {
             <textarea value={form.features} onChange={e => setForm(f => ({ ...f, features: e.target.value }))} className={inputCls("resize-none")} rows={2} /></div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={saving} className="flex-1 py-3 bg-primary text-white text-sm font-bold tracking-widest uppercase rounded-xl hover:bg-accent transition-colors disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 py-3 bg-primary text-white text-xs sm:text-sm font-bold tracking-widest uppercase rounded-xl hover:bg-accent transition-colors disabled:opacity-50">
               {saving ? "Saving & Uploading…" : product ? "Save Changes" : "Create Product"}
             </button>
-            <button type="button" onClick={onClose} className="px-6 py-3 border-2 border-border text-foreground text-sm font-bold uppercase rounded-xl hover:border-primary transition-colors">
+            <button type="button" onClick={onClose} className="px-4 sm:px-6 py-3 border-2 border-border text-foreground text-xs sm:text-sm font-bold uppercase rounded-xl hover:border-primary transition-colors">
               Cancel
             </button>
           </div>
@@ -386,39 +569,44 @@ function ProductsTab() {
     load(); refetchStorefront();
   }
 
+  const stockBadgeCls = (p: Product) => cn(
+    "px-2.5 py-1 rounded-full text-xs font-bold",
+    p.stock === 0 ? "bg-red-100 text-red-700" : p.stock <= 5 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
+  );
+
   return (
     <div>
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-border p-4 mb-5 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[200px]">
+      <div className="bg-black/15 rounded-2xl border border-border p-4 mb-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <div className="col-span-2 sm:flex-1 sm:min-w-[200px]">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Search</label>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, brand, SKU…" className={inputCls("pl-9")} />
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Category</label>
           <select value={category} onChange={e => { setCategory(e.target.value); setSubcategory(""); }} className={inputCls()}>
             <option value="">All</option>
             {options.categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Subcategory</label>
           <select value={subcategory} onChange={e => setSubcategory(e.target.value)} className={inputCls()}>
             <option value="">All</option>
             {options.subcategories.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Collection</label>
           <select value={collection} onChange={e => setCollection(e.target.value)} className={inputCls()}>
             <option value="">All</option>
             {options.collections.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Stock</label>
           <select value={stockStatus} onChange={e => setStockStatus(e.target.value as any)} className={inputCls()}>
             <option value="">Any</option>
@@ -427,7 +615,7 @@ function ProductsTab() {
             <option value="out">Out of stock</option>
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Status</label>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className={inputCls()}>
             <option value="active">Active</option>
@@ -435,7 +623,7 @@ function ProductsTab() {
             <option value="all">All</option>
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Sort</label>
           <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className={inputCls()}>
             <option value="newest">Newest</option>
@@ -447,13 +635,60 @@ function ProductsTab() {
             <option value="rating">Top Rated</option>
           </select>
         </div>
-        <button onClick={() => { setEditing(null); setShowForm(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-xl hover:bg-accent transition-colors">
+        <button onClick={() => { setEditing(null); setShowForm(true); }} className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-xl hover:bg-accent transition-colors">
           <Plus className="w-4 h-4" /> Add Product
         </button>
       </div>
 
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="bg-black/15 rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground text-sm">Loading…</div>
+        ) : rows.length === 0 ? (
+          <div className="bg-black/15 rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground text-sm">No products match these filters.</div>
+        ) : rows.map(p => (
+          <div key={p.id} className="bg-black/15 rounded-2xl border border-border p-3">
+            <div className="flex items-start gap-3">
+              <div className="w-14 h-16 bg-[#F5F0E8] rounded-lg overflow-hidden flex-shrink-0">
+                {p.images[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm text-foreground break-words">{p.name}</p>
+                <p className="text-xs text-muted-foreground break-words">{p.brand}{p.sku ? ` · ${p.sku}` : ""}</p>
+                <p className="text-xs text-muted-foreground mt-1 break-words">{p.category} / {p.subcategory}</p>
+              </div>
+              <p className="font-semibold text-sm flex-shrink-0">₵{p.price.toLocaleString()}</p>
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-3">
+                <span className={stockBadgeCls(p)}>{p.stock}</span>
+                {p.isActive ? (
+                  <span className="text-xs font-bold text-green-700">Active</span>
+                ) : (
+                  <span className="text-xs font-bold text-muted-foreground">Deactivated</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => { setEditing(p); setShowForm(true); }} className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-primary">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                {p.isActive ? (
+                  <button onClick={() => handleDelete(p)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-muted-foreground hover:text-red-600">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button onClick={() => handleRestore(p)} className="p-2 hover:bg-green-50 rounded-lg transition-colors text-muted-foreground hover:text-green-600">
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
+      <div className="hidden md:block bg-black/15 rounded-2xl border border-border overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary text-left">
@@ -471,7 +706,7 @@ function ProductsTab() {
             ) : rows.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No products match these filters.</td></tr>
             ) : rows.map(p => (
-              <tr key={p.id} className="border-t border-border hover:bg-[#FFFCF5] transition-colors">
+              <tr key={p.id} className="border-t border-border hover:bg-[#0A1810] transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-12 bg-[#F5F0E8] rounded-lg overflow-hidden flex-shrink-0">
@@ -486,10 +721,7 @@ function ProductsTab() {
                 <td className="px-4 py-3 text-muted-foreground">{p.category} / {p.subcategory}</td>
                 <td className="px-4 py-3 font-semibold">₵{p.price.toLocaleString()}</td>
                 <td className="px-4 py-3">
-                  <span className={cn(
-                    "px-2.5 py-1 rounded-full text-xs font-bold",
-                    p.stock === 0 ? "bg-red-100 text-red-700" : p.stock <= 5 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"
-                  )}>
+                  <span className={stockBadgeCls(p)}>
                     {p.stock}
                   </span>
                 </td>
@@ -597,32 +829,40 @@ function OrdersTab() {
     refunded: "bg-purple-100 text-purple-700",
   };
 
+  function renderExpandedDetails() {
+    return !expandedOrder ? (
+      <p className="text-sm text-muted-foreground">Loading items…</p>
+    ) : (
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground mb-2 break-words">{expandedOrder.address}, {expandedOrder.city}, {expandedOrder.state} · {expandedOrder.phone} · {expandedOrder.deliveryMethod} delivery · {expandedOrder.paymentMethod}</p>
+        {expandedOrder.items?.map((item, i) => (
+          <div key={i} className="flex justify-between gap-3 text-sm bg-card rounded-lg px-3 py-2 border border-border">
+            <span className="min-w-0 break-words">{item.productName} — {item.color}, size {item.size} × {item.qty}</span>
+            <span className="font-semibold flex-shrink-0">₵{(item.unitPrice * item.qty).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="bg-white rounded-2xl border border-border p-4 mb-5 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[200px]">
+      <div className="bg-black/15 rounded-2xl border border-border p-4 mb-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <div className="col-span-2 sm:flex-1 sm:min-w-[200px]">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Search</label>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Order #, email, name…" className={inputCls("pl-9")} />
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Status</label>
           <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls()}>
             <option value="">All</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
           </select>
         </div>
-        <div>
-          <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">From</label>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={inputCls()} />
-        </div>
-        <div>
-          <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">To</label>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={inputCls()} />
-        </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">Sort</label>
           <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className={inputCls()}>
             <option value="newest">Newest</option>
@@ -631,9 +871,57 @@ function OrdersTab() {
             <option value="total-asc">Total: Low → High</option>
           </select>
         </div>
+        <div className="min-w-0">
+          <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">From</label>
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={inputCls()} />
+        </div>
+        <div className="min-w-0">
+          <label className="text-xs font-bold uppercase mb-1 block text-muted-foreground">To</label>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={inputCls()} />
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="bg-black/15 rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground text-sm">Loading…</div>
+        ) : rows.length === 0 ? (
+          <div className="bg-black/15 rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground text-sm">No orders match these filters.</div>
+        ) : rows.map(o => (
+          <div key={o.id} className="bg-black/15 rounded-2xl border border-border p-3">
+            <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => toggleExpand(o)}>
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground text-sm break-words">{o.orderNumber}</p>
+                <p className="text-xs text-muted-foreground break-words">{o.firstName} {o.lastName}</p>
+                <p className="text-xs text-muted-foreground break-all">{o.email}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-semibold text-sm">₵{o.total.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-border">
+              <select
+                value={o.status}
+                onClick={e => e.stopPropagation()}
+                onChange={e => handleStatusChange(o, e.target.value as Order["status"])}
+                className={cn("text-xs font-bold rounded-full px-3 py-1.5 border-0 focus:outline-none", statusColor[o.status])}
+              >
+                {ORDER_STATUSES.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+              </select>
+              <button onClick={() => toggleExpand(o)} className="px-3 py-1.5 text-muted-foreground">{expanded === o.id ? "▲" : "▼"}</button>
+            </div>
+            {expanded === o.id && (
+              <div className="mt-3 pt-3 border-t border-border">
+                {renderExpandedDetails()}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="hidden md:block bg-black/15 rounded-2xl border border-border overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary text-left">
@@ -651,8 +939,8 @@ function OrdersTab() {
             ) : rows.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No orders match these filters.</td></tr>
             ) : rows.map(o => (
-              <>
-                <tr key={o.id} className="border-t border-border hover:bg-[#FFFCF5] transition-colors cursor-pointer" onClick={() => toggleExpand(o)}>
+              <Fragment key={o.id}>
+                <tr className="border-t border-border hover:bg-[#0A1810] transition-colors cursor-pointer" onClick={() => toggleExpand(o)}>
                   <td className="px-4 py-3 font-semibold text-foreground">{o.orderNumber}</td>
                   <td className="px-4 py-3 text-muted-foreground">{o.firstName} {o.lastName}<br /><span className="text-xs">{o.email}</span></td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</td>
@@ -670,25 +958,13 @@ function OrdersTab() {
                   <td className="px-4 py-3 text-right text-muted-foreground">{expanded === o.id ? "▲" : "▼"}</td>
                 </tr>
                 {expanded === o.id && (
-                  <tr className="bg-[#FFFCF5] border-t border-border">
+                  <tr className="bg-[#0A1810] border-t border-border">
                     <td colSpan={6} className="px-4 py-4">
-                      {!expandedOrder ? (
-                        <p className="text-sm text-muted-foreground">Loading items…</p>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground mb-2">{expandedOrder.address}, {expandedOrder.city}, {expandedOrder.state} · {expandedOrder.phone} · {expandedOrder.deliveryMethod} delivery · {expandedOrder.paymentMethod}</p>
-                          {expandedOrder.items?.map((item, i) => (
-                            <div key={i} className="flex justify-between text-sm bg-white rounded-lg px-3 py-2 border border-border">
-                              <span>{item.productName} — {item.color}, size {item.size} × {item.qty}</span>
-                              <span className="font-semibold">₵{(item.unitPrice * item.qty).toLocaleString()}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {renderExpandedDetails()}
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -702,49 +978,66 @@ function OrdersTab() {
 // ─── ADMIN PAGE ROOT ────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"products" | "orders">("products");
+  const [tab, setTab] = useState<"dashboard" | "products" | "orders" | "news">("dashboard");
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10">
+    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 sm:py-10 overflow-x-hidden">
       
-      <div className="mb-8 flex items-start justify-between">
-        <div>
+      <div className="mb-6 sm:mb-8 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-xs font-semibold tracking-[0.2em] uppercase text-primary mb-2">Admin</p>
-          <h1 className="font-serif text-4xl font-bold text-foreground">Store Management</h1>
+          <h1 className="font-serif text-2xl sm:text-4xl font-bold text-foreground">Store Management</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <NotificationBell />
           <button
             onClick={async () => {
               await signOut();
               window.location.reload();
             }}
-            className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-primary border-2 border-border hover:border-primary rounded-xl transition-colors"
+            className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-primary border-2 border-border hover:border-primary rounded-xl transition-colors whitespace-nowrap"
           >
             Sign Out
           </button>
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setTab("dashboard")}
+          className={cn("flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl border-2 transition-colors",
+            tab === "dashboard" ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary")}
+        >
+          <TrendingUp className="w-4 h-4" /> Dashboard
+        </button>
         <button
           onClick={() => setTab("products")}
-          className={cn("flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border-2 transition-colors",
+          className={cn("flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl border-2 transition-colors",
             tab === "products" ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary")}
         >
           <Package className="w-4 h-4" /> Products
         </button>
         <button
           onClick={() => setTab("orders")}
-          className={cn("flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border-2 transition-colors",
+          className={cn("flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl border-2 transition-colors",
             tab === "orders" ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary")}
         >
           <ClipboardList className="w-4 h-4" /> Orders
         </button>
+        <button
+          onClick={() => setTab("news")}
+          className={cn("flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl border-2 transition-colors",
+            tab === "news" ? "bg-primary text-white border-primary" : "border-border text-muted-foreground hover:border-primary")}
+        >
+          <Newspaper className="w-4 h-4" /> Sneaker News
+        </button>
       </div>
 
-      {tab === "products" ? <ProductsTab /> : <OrdersTab />}
+      {tab === "dashboard" && <DashboardTab />}
+      {tab === "products" && <ProductsTab />}
+      {tab === "orders" && <OrdersTab />}
+      {tab === "news" && <AdminNewsTab />}
     </div>
   );
 }

@@ -4,18 +4,18 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 export type Page =
   | "home" | "shop" | "product" | "about" | "collections"
   | "size-guide" | "delivery" | "faq" | "contact" | "account"
-  | "cart" | "checkout" | "admin";
+  | "cart" | "checkout" | "admin" | "news";
 
 const KNOWN_PAGES: Page[] = [
   "shop", "product", "about", "collections", "size-guide", "delivery",
-  "faq", "contact", "account", "cart", "checkout", "admin",
+  "faq", "contact", "account", "cart", "checkout", "admin", "news",
 ];
 
 const BASE_PATH: Record<Page, string> = {
   home: "/", shop: "/shop", product: "/product", about: "/about",
   collections: "/collections", "size-guide": "/size-guide", delivery: "/delivery",
   faq: "/faq", contact: "/contact", account: "/account", cart: "/cart",
-  checkout: "/checkout", admin: "/admin",
+  checkout: "/checkout", admin: "/admin", news: "/news",
 };
 
 function pageFromPathname(pathname: string): Page {
@@ -47,6 +47,10 @@ export function useAppNav() {
 
     if (p === "product" && params.id) {
       path = `/product/${encodeURIComponent(params.id)}`;
+    }
+
+    if (p === "news" && params.id) {
+      path = `/news/${encodeURIComponent(params.id)}`;
     }
 
     const query = new URLSearchParams();

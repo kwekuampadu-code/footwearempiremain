@@ -206,3 +206,75 @@ export function orderFromRow(row: OrderRow, items: OrderItemRow[] = []): Order {
     })),
   };
 }
+
+// ── Sneaker News & Stories Types ─────────────────────────────────────────────
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  subtitle?: string;
+  brand?: string;
+  sneakerModel?: string;
+  imageUrl: string;
+  excerpt: string;
+  content: string;
+  author?: string;
+  publishedAt: string;
+  tag?: string;
+  isFeatured?: boolean;
+  isActive?: boolean;
+}
+
+export interface NewsArticleRow {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  brand: string | null;
+  sneaker_model: string | null;
+  image_url: string;
+  excerpt: string;
+  content: string;
+  author: string | null;
+  published_at: string;
+  tag: string | null;
+  is_featured: boolean;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export function newsArticleFromRow(row: NewsArticleRow): NewsArticle {
+  return {
+    id: row.id,
+    title: row.title,
+    subtitle: row.subtitle ?? undefined,
+    brand: row.brand ?? undefined,
+    sneakerModel: row.sneaker_model ?? undefined,
+    imageUrl: row.image_url,
+    excerpt: row.excerpt,
+    content: row.content,
+    author: row.author ?? "Footwear Empire",
+    publishedAt: row.published_at || new Date().toISOString(),
+    tag: row.tag ?? "Exclusive Story",
+    isFeatured: row.is_featured ?? false,
+    isActive: row.is_active ?? true,
+  };
+}
+
+export function newsArticleToRow(article: Partial<NewsArticle>): Partial<NewsArticleRow> {
+  const row: Partial<NewsArticleRow> = {};
+  if (article.id !== undefined) row.id = article.id;
+  if (article.title !== undefined) row.title = article.title;
+  if (article.subtitle !== undefined) row.subtitle = article.subtitle;
+  if (article.brand !== undefined) row.brand = article.brand;
+  if (article.sneakerModel !== undefined) row.sneaker_model = article.sneakerModel;
+  if (article.imageUrl !== undefined) row.image_url = article.imageUrl;
+  if (article.excerpt !== undefined) row.excerpt = article.excerpt;
+  if (article.content !== undefined) row.content = article.content;
+  if (article.author !== undefined) row.author = article.author;
+  if (article.publishedAt !== undefined) row.published_at = article.publishedAt;
+  if (article.tag !== undefined) row.tag = article.tag;
+  if (article.isFeatured !== undefined) row.is_featured = article.isFeatured;
+  if (article.isActive !== undefined) row.is_active = article.isActive;
+  return row;
+}

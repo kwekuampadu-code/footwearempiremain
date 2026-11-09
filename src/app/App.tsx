@@ -14,6 +14,8 @@ import { Product, CartItem } from "@/lib/types";
 import { ProductsProvider, useProducts } from "@/context/ProductsContext";
 import { createOrder } from "@/lib/orderService"; // For the CheckoutPage
 import AdminPage from "@/pages/AdminPage";
+import NewsPage from "@/pages/NewsPage";
+import HomeNewsSection from "@/components/HomeNewsSection";
 import { usePaystackPayment } from "react-paystack";
 import { PAYSTACK_PUBLIC_KEY } from "@/lib/paystackConfig";
 import { notifyOwner } from "@/lib/notificationService";
@@ -152,7 +154,7 @@ function ProductBadge({ type }: { type: "new" | "sale" | "best" }) {
   const styles = {
     new: "bg-primary text-white",
     sale: "bg-red-600 text-white",
-    best: "bg-amber-500 text-white",
+    best: "bg-primary text-white",
   };
   const labels = { new: "New", sale: "Sale", best: "Best Seller" };
   return (
@@ -174,7 +176,7 @@ function ProductCard({ product, navigate, onAddToCart }: {
 
   return (
     <div
-      className="group bg-card rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-border"
+      className="group bg-[#d] rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-border"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => navigate("product", { id: product.id })}
@@ -244,13 +246,14 @@ function Navbar({ currentPage, navigate, cartCount }: {
 
   const navLinks: { label: string; page: Page }[] = [
     { label: "Collections", page: "collections" },
+    { label: "News", page: "news" },
     { label: "About", page: "about" },
     { label: "Size Guide", page: "size-guide" },
     { label: "Contact", page: "contact" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+    <header className="sticky top-0 z-50 bg-[#0A1810]/95 backdrop-blur-sm border-b border-border">
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -346,13 +349,14 @@ function Navbar({ currentPage, navigate, cartCount }: {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="lg:hidden border-t border-border bg-white">
+        <div className="lg:hidden border-t border-border bg-[#0A1810]">
           <nav className="px-5 py-4 space-y-0.5">
             {[
               { label: "Home", action: () => navigate("home") },
               { label: "Men's Shoes", action: () => navigate("shop", { category: "men" }) },
               { label: "Accessories", action: () => navigate("shop", { category: "accessories" }) },
               { label: "Collections", action: () => navigate("collections") },
+              { label: "Sneaker News", action: () => navigate("news") },
               { label: "About Us", action: () => navigate("about") },
               { label: "Size Guide", action: () => navigate("size-guide") },
               { label: "Contact", action: () => navigate("contact") },
@@ -424,6 +428,7 @@ function Footer({ navigate }: { navigate: (p: Page, params?: Record<string, stri
             <ul className="space-y-3">
               {[
                 { label: "About Us", page: "about" as Page },
+                { label: "Sneaker News", page: "news" as Page },
                 { label: "Delivery & Returns", page: "delivery" as Page },
                 { label: "Size Guide", page: "size-guide" as Page },
                 { label: "FAQ", page: "faq" as Page },
@@ -502,7 +507,7 @@ function HomePage({ navigate, addToCart }: {
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="grid lg:grid-cols-2 min-h-[75vh] lg:min-h-[75vh]">
         {/* Left: copy */}
-        <div className="flex flex-col bg-[#FFFCF5] order-2 lg:order-1">
+        <div className="flex flex-col bg-[#0A1810] order-2 lg:order-1">
 
           {/* Hero copy — centred in remaining space */}
           <div className="flex flex-col justify-start flex-1 px-8 md:px-14 lg:px-16 pt-12 pb-16">
@@ -554,7 +559,7 @@ function HomePage({ navigate, addToCart }: {
         </div>
 
         {/* Right: lifestyle image — desktop only */}
-        <div className="hidden lg:block relative overflow-hidden bg-[#FFFCF5] order-2">
+        <div className="hidden lg:block relative overflow-hidden bg-[#0A1810] order-2">
           <img
             src={rightimage}
             alt="Nike sneakers on wall"
@@ -564,7 +569,7 @@ function HomePage({ navigate, addToCart }: {
       </section>
 
       {/* ── TRUST BAR ────────────────────────────────────────────────────── */}
-      <section className="bg-white border-b border-border">
+      <section className="bg-[#0A1810] border-b border-border">
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border">
             {[
@@ -617,7 +622,7 @@ function HomePage({ navigate, addToCart }: {
       </section>
 
       {/* ── NEW ARRIVALS ─────────────────────────────────────────────────── */}
-      <section className="bg-[#F8F3E8] py-20">
+      <section className="bg-[#0A1810] py-20">
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
           <div className="flex items-end justify-between mb-10">
             <div>
@@ -634,17 +639,20 @@ function HomePage({ navigate, addToCart }: {
         </div>
       </section>
 
+      {/* ── SNEAKER NEWS & RELEASES ───────────────────────────────────────── */}
+      <HomeNewsSection navigate={navigate} />
+
       {/* ── EDITORIAL BANNER ─────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
-        <div className="relative overflow-hidden rounded-3xl bg-[#1A1208] grid lg:grid-cols-5">
+        <div className="relative overflow-hidden rounded-3xl bg-[#D7D2C8] grid lg:grid-cols-5">
           <div className="lg:col-span-3 p-10 lg:p-16 flex flex-col justify-center">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.2em] uppercase text-accent mb-6">
-              <span className="w-6 h-px bg-accent" /> Empire Prestige Line
+            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.2em] uppercase text-secondary mb-6">
+              <span className="w-6 h-px bg-black" /> Empire Prestige Line
             </span>
-            <h2 className="font-serif text-4xl lg:text-5xl font-bold text-white mb-5 leading-tight">
-              Handcrafted<br />for the Discerning<br /><em className="text-accent not-italic">Gentleman</em>
+            <h2 className="font-serif text-4xl lg:text-5xl font-bold text-black mb-5 leading-tight">
+              Handcrafted<br />for the Discerning<br /><em className="text-secondary not-italic">Gentleman</em>
             </h2>
-            <p className="text-white/60 text-base leading-relaxed mb-8 max-w-md">
+            <p className="text-black/60 text-base leading-relaxed mb-8 max-w-md">
               Full-grain leather, Goodyear welt construction, and hand-burnished finishes. Shoes that only get better with time.
             </p>
             <button
@@ -656,8 +664,8 @@ function HomePage({ navigate, addToCart }: {
           </div>
           <div className="hidden lg:block lg:col-span-2 relative overflow-hidden">
             <img
-              src={img("1515347619252-60a4bf4fff4f", 700, 600)}
-              alt="Premium formal shoes"
+              src={formal}
+              alt="Nike sneakers on wall"
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#1A1208]/60 to-transparent" />
@@ -797,7 +805,7 @@ function ShopPage({ navigate, addToCart, category, sub, collection }: {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar */}
         <aside className="w-full lg:w-56 flex-shrink-0">
-          <div className="bg-white rounded-2xl border border-border p-5 sticky top-28">
+          <div className="bg-card rounded-2xl border border-border p-5 sticky top-28">
             <div className="mb-6">
               <p className="text-xs font-bold tracking-[0.15em] uppercase text-foreground mb-4">Category</p>
               <div className="space-y-1">
@@ -807,7 +815,7 @@ function ShopPage({ navigate, addToCart, category, sub, collection }: {
                       onClick={() => { setActiveCategory(cat.id); setActiveSub(""); }}
                       className={cn(
                         "w-full text-left text-sm py-2 px-3 rounded-lg transition-colors font-medium",
-                        activeCategory === cat.id ? "text-primary bg-secondary" : "text-muted-foreground hover:text-foreground hover:bg-gray-50"
+                        activeCategory === cat.id ? "text-primary bg-secondary" : "text-muted-foreground hover:text-foreground hover:bg-[#0A1810]"
                       )}
                     >
                       {cat.label}
@@ -839,13 +847,13 @@ function ShopPage({ navigate, addToCart, category, sub, collection }: {
             <div className="border-t border-border pt-5">
               <p className="text-xs font-bold tracking-[0.15em] uppercase text-foreground mb-4">Max Price</p>
               <input
-                type="range" min={1000} max={30000} step={500}
+                type="range" min={10} max={10000} step={50}
                 value={maxPrice}
                 onChange={e => setMaxPrice(+e.target.value)}
                 className="w-full accent-primary"
               />
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-muted-foreground">₵1,000</span>
+                <span className="text-xs text-muted-foreground">₵10</span>
                 <span className="text-xs font-bold text-primary">{formatPrice(maxPrice)}</span>
               </div>
             </div>
@@ -862,7 +870,7 @@ function ShopPage({ navigate, addToCart, category, sub, collection }: {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              className="text-sm bg-white border border-border rounded-xl text-foreground px-4 py-2.5 focus:outline-none focus:border-primary"
+              className="text-sm bg-card border border-border rounded-xl text-foreground px-4 py-2.5 focus:outline-none focus:border-primary"
             >
               <option value="featured">Featured</option>
               <option value="price-asc">Price: Low → High</option>
@@ -1453,7 +1461,7 @@ function ContactPage() {
     setForm({ name: "", email: "", phone: "", subject: "", message: "" });
   }
 
-  const inputCls = "w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
+  const inputCls = "w-full px-4 py-3 bg-[#0a1810] border-2 border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14">
@@ -1502,11 +1510,11 @@ function ContactPage() {
 
         <div className="lg:col-span-2 space-y-4">
           {[
-            { icon: Phone, title: "Phone", content: "+233 59 882 7441", sub: "Mon–Sat, 9am–6pm", color: "bg-blue-50 text-blue-600" },
-            { icon: MessageCircle, title: "WhatsApp", content: "+233 59 882 7441", sub: "Reply within 24 hours", color: "bg-green-50 text-green-600" },
-            { icon: Mail, title: "Email", content: "hello@footwearempire.com", sub: "Reply within 24 hours", color: "bg-purple-50 text-purple-600" },
+            { icon: Phone, title: "Phone", content: "+233 59 882 7441", sub: "Mon–Sat, 9am–6pm", color: "bg-[#0a1810] text-green-600" },
+            { icon: MessageCircle, title: "WhatsApp", content: "+233 59 882 7441", sub: "Reply within 24 hours", color: "bg-[#0a1810] text-green-600" },
+            { icon: Mail, title: "Email", content: "hello@footwearempire.com", sub: "Reply within 24 hours", color: "bg-[#0a1810] text-green-600" },
           ].map(item => (
-            <div key={item.title} className="flex items-start gap-4 p-5 bg-white rounded-2xl border border-border shadow-sm">
+            <div key={item.title} className="flex items-start gap-4 p-5 bg-card rounded-2xl border border-border shadow-sm">
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", item.color)}>
                 <item.icon className="w-4 h-4" />
               </div>
@@ -1534,7 +1542,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState("orders");
 
-  const inputCls = "w-full px-4 py-3 bg-[#FFFCF5] border-2 border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
+  const inputCls = "w-full px-4 py-3 bg-[#0a1810] border-2 border-border rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
 
   // Fetch user's real orders from Supabase when they log in
   useEffect(() => {
@@ -1616,7 +1624,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
       <div className="flex items-center justify-between mb-8">
         <div>
           <SectionLabel>My Account</SectionLabel>
-          <h1 className="font-serif text-3xl font-bold text-foreground">Hello 👋</h1>
+          <h1 className="font-serif text-3xl font-bold text-foreground">Hello, </h1>
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
         <button onClick={signOut} className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium">Sign Out</button>
@@ -1637,7 +1645,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
       {activeTab === "orders" && (
         <div className="space-y-3">
           {orders.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-border">
+            <div className="text-center py-16 bg-card rounded-2xl border border-border">
               <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">You haven't placed any orders yet.</p>
               <button onClick={() => navigate("shop")} className="px-6 py-3 bg-primary text-white text-sm font-bold uppercase rounded-xl hover:bg-accent transition-colors">
@@ -1646,7 +1654,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
             </div>
           ) : (
             orders.map(order => (
-              <div key={order.id} className="p-5 bg-white rounded-2xl border border-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div key={order.id} className="p-5 bg-card rounded-2xl border border-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <p className="text-sm font-bold text-foreground">{order.orderNumber}</p>
@@ -1671,7 +1679,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
       )}
 
       {activeTab === "wishlist" && (
-        <div className="text-center py-16 bg-white rounded-2xl border border-border">
+        <div className="text-center py-16 bg-card rounded-2xl border border-border">
           <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Your wishlist is empty.</p>
         </div>
@@ -1679,7 +1687,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
 
       {activeTab === "addresses" && (
         <div className="space-y-4">
-          <div className="p-5 bg-white rounded-2xl border border-border shadow-sm">
+          <div className="p-5 bg-card rounded-2xl border border-border shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs bg-secondary text-primary px-3 py-1 font-bold rounded-full">Default</span>
               <button className="text-xs text-primary hover:text-accent transition-colors font-semibold">Edit</button>
@@ -1694,7 +1702,7 @@ function AccountPage({ navigate }: { navigate: (p: Page, params?: Record<string,
       )}
 
       {activeTab === "profile" && (
-        <div className="max-w-md bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
+        <div className="max-w-md bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
           <div>
             <label className="text-xs font-bold tracking-widest uppercase text-foreground block mb-1.5">Email</label>
             <input value={user.email} disabled className={cn(inputCls, "opacity-60 cursor-not-allowed")} />
@@ -1951,7 +1959,7 @@ function CheckoutPage({ cart, navigate, clearCart }: {
     }
   }
 
-  const inputCls = "w-full px-4 py-3 bg-[#FFFCF5] border-2 border-border rounded-xl text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
+  const inputCls = "w-full px-4 py-3 bg-[#0a1810] border-2 border-border rounded-xl text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors";
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12">
@@ -1978,7 +1986,7 @@ function CheckoutPage({ cart, navigate, clearCart }: {
           <div className="lg:col-span-2 space-y-5">
 
             {/* Step 1: Shipping Address */}
-            <div className="p-6 bg-white rounded-2xl border border-border shadow-sm">
+            <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-sm font-bold tracking-widest uppercase text-foreground flex items-center gap-2">
                   <span className={cn("w-7 h-7 text-xs font-bold flex items-center justify-center rounded-full", step >= 1 ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>1</span>
@@ -2037,7 +2045,7 @@ function CheckoutPage({ cart, navigate, clearCart }: {
 
             {/* Step 2: Delivery Method */}
             {step >= 2 && (
-              <div className="p-6 bg-white rounded-2xl border border-border shadow-sm">
+              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-sm font-bold tracking-widest uppercase text-foreground flex items-center gap-2">
                     <span className="w-7 h-7 bg-primary text-white text-xs font-bold flex items-center justify-center rounded-full">2</span>
@@ -2074,7 +2082,7 @@ function CheckoutPage({ cart, navigate, clearCart }: {
 
             {/* Step 3: Payment Method */}
             {step >= 3 && (
-              <div className="p-6 bg-white rounded-2xl border border-border shadow-sm">
+              <div className="p-6 bg-card rounded-2xl border border-border shadow-sm">
                 <h2 className="text-sm font-bold tracking-widest uppercase text-foreground flex items-center gap-2 mb-5">
                   <span className="w-7 h-7 bg-primary text-white text-xs font-bold flex items-center justify-center rounded-full">3</span>
                   Payment Method
@@ -2106,7 +2114,7 @@ function CheckoutPage({ cart, navigate, clearCart }: {
           </div>
 
           {/* Order Summary Sidebar */}
-          <div className="p-6 bg-white rounded-2xl border border-border shadow-sm h-fit sticky top-28">
+          <div className="p-6 bg-card rounded-2xl border border-border shadow-sm h-fit sticky top-28">
             <p className="text-xs font-bold tracking-widest uppercase text-foreground mb-4">Order Summary</p>
             <div className="space-y-3 mb-4">
               {cart.map(item => (
@@ -2201,6 +2209,7 @@ function AppShell() {
         {page === "delivery" && <DeliveryReturnsPage />}
         {page === "faq" && <FAQPage />}
         {page === "contact" && <ContactPage />}
+        {page === "news" && <NewsPage articleId={pageParams.id} navigate={navigate} />}
         {page === "account" && <AccountPage navigate={navigate} />}
         {page === "cart" && <CartPage cart={cart} updateQty={updateQty} removeItem={id => { setCart(p => p.filter(i => i.id !== id)); toast.success("Item removed"); }} navigate={navigate} />}
         {page === "checkout" && <CheckoutPage cart={cart} navigate={navigate} clearCart={() => setCart([])} />}
@@ -2221,6 +2230,8 @@ export default function App() {
               <Route path="/" element={<AppShell />} />
               <Route path="/shop" element={<AppShell />} />
               <Route path="/product/:id" element={<AppShell />} />
+              <Route path="/news" element={<AppShell />} />
+              <Route path="/news/:id" element={<AppShell />} />
               <Route path="/about" element={<AppShell />} />
               <Route path="/collections" element={<AppShell />} />
               <Route path="/size-guide" element={<AppShell />} />
@@ -2237,5 +2248,5 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </>
-    );
+  );
 }

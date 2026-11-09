@@ -43,18 +43,6 @@ export default function LoadingScreen() {
           alt="Footwear Empire"
           className="h-24 md:h-32 w-auto object-contain [filter:brightness(0)_invert(1)] drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
         />
-        {/* the shine */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            className="absolute top-0 bottom-0 left-0 w-1/2"
-            style={{
-              background:
-                "linear-gradient(100deg, transparent 0%, rgba(16,185,129,0) 35%, rgba(110,231,183,0.8) 48%, rgba(255,255,255,0.9) 52%, rgba(110,231,183,0.8) 56%, transparent 80%)",
-              mixBlendMode: "screen",
-              animation: "shineSweep 2.4s ease-in-out 0.8s infinite",
-            }}
-          />
-        </div>
       </div>
 
       {/* tagline */}
